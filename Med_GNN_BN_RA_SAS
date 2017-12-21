@@ -27,7 +27,7 @@ else if index(description,'HYDROXYCHLOROQUINE') or index(description,'HYDROXYCHL
 else if index(description,'HYDROXYCHLOROQUINE') or index(description,'PLAQUENIL') then GNN='HYDROXYCHLOROQUINE';
 else if index(description,'HYDROXYCHLOROQUINE') or index(description,'QUINEPROX') then GNN='HYDROXYCHLOROQUINE';
 else if index(description,'INFLIXIMAB') or index(description,'REMICADE') then GNN='INFLIXIMAB';
-else if index(description,'INFLIXIMAB-DYYB') or index(description,'INFLECTRA') then GNN='INFLIXIMAB-DYYB';
+else if index(description,'INFLIXIMAB-DYYB') or index(description,'INFLECTRA') then GNN='INFLIXIMAB';
 else if index(description,'IXEKIZUMAB')  then GNN='IXEKIZUMAB';
 else if index(description,'LEFLUNOMIDE') or index(description,'ARAVA') then GNN='LEFLUNOMIDE';
 else if index(description,'LEFLUNOMIDE') or index(description,'LEFLUNOMIDE') then GNN='LEFLUNOMIDE';
