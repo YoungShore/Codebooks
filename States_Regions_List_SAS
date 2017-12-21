@@ -1,0 +1,186 @@
+/* SAS Codes for State & Regions */
+
+proc format;
+
+  value $region9_
+    'CT','ME','MA','NH','RI','VT'					        = 'NEL-NewEngland'
+    'NJ','NY','PA'									              = 'MAT-MiddleAtlantic'
+    'IN','IL','MI','OH','WI'						          = 'ENC-EastNorthCentral'
+    'IA','KS','MN','MO','NE','ND','SD'				    = 'WNC-WestNorthCentral'
+    'DE','DC','FL','GA','MD','NC','SC','VA','WV'	= 'SAT-SouthAtlantic'
+    'AL','KY','MS','TN'								            = 'ESC-EastSouthCentral'
+    'AR','LA','OK','TX'								            = 'WSC-WestSouthCentral'
+    'AZ','CO','ID','NM','MT','UT','NV','WY'			  = 'MNT-Mountain'
+    'AK','CA','HI','OR','WA'						          = 'PAC-Pacific'
+    ;
+  value $region4_
+    'CT','ME','MA','NH','RI','VT','NJ','NY','PA'	= 'NE-NorthEast'
+    'IN','IL','MI','OH','WI','IA','KS','MN','MO',
+    'NE','ND','SD'									              = 'MW-MidWest'
+    'DE','DC','FL','GA','MD','NC','SC','VA','WV',
+    'AL','KY','MS','TN','AR','LA','OK','TX'			  = 'S-South'
+    'AZ','CO','ID','NM','MT','UT','NV','WY','AK',
+    'CA','HI','OR','WA'								            = 'W-West'
+    ;
+  value $stateCD
+    'CT'='09'
+    'ME'='23'
+    'MA'='25'
+    'NH'='33'
+    'RI'='44'
+    'VT'='50'
+    'NJ'='34'
+    'NY'='36'
+    'PA'='42'
+    'IN'='18'
+    'IL'='17'
+    'MI'='26'
+    'OH'='39'
+    'WI'='55'
+    'IA'='19'
+    'KS'='20'
+    'MN'='27'
+    'MO'='29'
+    'NE'='31'
+    'ND'='38'
+    'SD'='46'
+    'DE'='10'
+    'DC'='11'
+    'FL'='12'
+    'GA'='13'
+    'MD'='24'
+    'NC'='37'
+    'SC'='45'
+    'VA'='51'
+    'WV'='54'
+    'AL'='01'
+    'KY'='21'
+    'MS'='28'
+    'TN'='47'
+    'AR'='05'
+    'LA'='22'
+    'OK'='40'
+    'TX'='48'
+    'AZ'='04'
+    'CO'='08'
+    'ID'='16'
+    'NM'='35'
+    'MT'='30'
+    'UT'='49'
+    'NV'='32'
+    'WY'='56'
+    'AK'='02'
+    'CA'='06'
+    'HI'='15'
+    'OR'='41'
+    'WA'='53'
+    ;
+run;
+
+%let state = 
+Connecticut
+Maine
+Massachusetts
+New Hampshire
+Rhode Island
+Vermont
+New Jersey
+New York
+Pennsylvania
+Indiana
+Illinois
+Michigan
+Ohio
+Wisconsin
+Iowa
+Kansas
+Minnesota
+Missouri
+Nebraska
+North Dakota
+South Dakota
+Delaware
+District of Columbia
+Florida
+Georgia
+Maryland
+North Carolina
+South Carolina
+Virginia
+West Virginia
+Alabama
+Kentucky
+Mississippi
+Tennessee
+Arkansas
+Louisiana
+Oklahoma
+Texas
+Arizona
+Colorado
+Idaho
+New Mexico
+Montana
+Utah
+Nevada
+Wyoming
+Alaska
+California
+Hawaii
+Oregon
+Washington
+;
+
+%let stateAbbr = 
+CT
+ME
+MA
+NH
+RI
+VT
+NJ
+NY
+PA
+IN
+IL
+MI
+OH
+WI
+IA
+KS
+MN
+MO
+NE
+ND
+SD
+DE
+DC
+FL
+GA
+MD
+NC
+SC
+VA
+WV
+AL
+KY
+MS
+TN
+AR
+LA
+OK
+TX
+AZ
+CO
+ID
+NM
+MT
+UT
+NV
+WY
+AK
+CA
+HI
+OR
+WA
+;
