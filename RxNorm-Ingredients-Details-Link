@@ -1,0 +1,563 @@
+/* 20170929-RXNORM RELATION PREPARATION */
+
+libname rxnm18 "...\RxNorm_full_04022018\SAS datasets" ;
+
+proc datasets lib=work kill nolist;run;quit;
+
+options compress=binary;
+
+
+/* ======================================================================================== */
+/* RXNCONSO data contains key variables: 
+		TTY(RxCUI type), 
+		RXCUI, 
+		SAB(gives RXNORM, NDDF, SNOMED etc info), 
+		STR(text string) & 
+		CODE(contain RxCUI)													*/
+/* ======================================================================================== */
+
+proc sql noprint;
+select distinct upcase(tty) into : ttys separated by ' ' from rxnm18.rxnconso where strip(upcase(sab))='RXNORM';
+quit;
+%put &ttys. ;
+/* BN BPCK DF DFG ET GPCK IN MIN PIN PSN SBD SBDC SBDF SBDG SCD SCDC SCDF SCDG SY TMSY */
+
+data rxcui_tty(compress=binary) ;
+set rxnm18.rxnconso ;
+if strip(upcase(sab)) = 'RXNORM' /*and strip(upcase(tty)) in ("BN","BPCK","GPCK","IN","MIN","PIN","SBD","SBDC","SBDG","SCD","SCDC","SCDG")*/;
+keep rxcui /*rxaui*/ str tty ;
+run ;*got 319783 from 1160735 ;
+proc sort data=rxcui_tty nodup ;
+by tty rxcui str ;
+run;*0 dups;
+proc freq data=rxcui_tty;
+table tty / missing;
+run;
+
+data rxcui_tty_selected(compress=binary index=(rxcui)) ; 
+set  rxcui_tty ;
+if strip(upcase(tty)) in ("IN","MIN","PIN","BN","BPCK","GPCK","SBD","SBDC","SBDG","SCD","SCDC","SCDG") ;
+run;*got 178855 from 319783;
+
+%macro pul_typs(typ) ;
+data rxcui_tty_&typ.(compress=binary) ;
+set rxcui_tty_selected ;
+if strip(upcase(tty)) = "&typ." ;
+run ;
+%mend;
+%pul_typs(IN);*got 11757 from 178855;
+%pul_typs(MIN);*got 3978 from 178855;
+%pul_typs(PIN);*got 2749 from 178855;
+%pul_typs(BN);*got 16098 from 178855;
+%pul_typs(BPCK);*got 602 from 178855;
+%pul_typs(GPCK);*got 546 from 178855;
+%pul_typs(SBD);*got 22568 from 178855;
+%pul_typs(SBDC);*got 18998 from 178855;
+%pul_typs(SBDG);*got 21007 from 178855;
+%pul_typs(SCD);*got 37081 from 178855;
+%pul_typs(SCDC);*got 27099 from 178855;
+%pul_typs(SCDG);*got 16372 from 178855;
+
+data rxcui_ingredts(compress=binary) ;
+set rxcui_tty_in (rename=(RXCUI=Ingredient_RXCUI str=Ingredient_Description tty=Ingredient_Type))
+	rxcui_tty_min(rename=(RXCUI=Ingredient_RXCUI str=Ingredient_Description tty=Ingredient_Type))
+	rxcui_tty_pin(rename=(RXCUI=Ingredient_RXCUI str=Ingredient_Description tty=Ingredient_Type)) ;
+run ;*got 18484 from 11757 & 3978 & 2749;
+
+/* ======================================================================== */
+/*	RXNREL data contains key variables:
+		RXCUI1, RXCUI2,
+		RELA (RXCUI2 is in relation of xxx to RXCUI1)
+		SAB: gives code system source										                        */
+/* ======================================================================== */
+
+data rxcui_rela(compress=binary);
+set rxnm18.rxnrel ;
+if strip(upcase(sab))='RXNORM' and strip(rxcui1)^='' and strip(rxcui2)^='' ;
+keep rxcui1 rxcui2 rela ;
+run;*got 1500674 from 6882780 ;
+proc sort data=rxcui_rela nodup;
+by rxcui1 rxcui2 rela ;
+run;*0 dups;
+/*
+proc sql;
+create table _tst_in1_not2 as
+select distinct rxcui1 
+from rxcui_rela
+where rxcui1 not in (select distinct rxcui2 from rxcui_rela); * 0 found;
+
+create table _tst_in2_not1 as
+select distinct rxcui2 
+from rxcui_rela
+where rxcui2 not in (select distinct rxcui1 from rxcui_rela); * 0 found;
+quit;
+*/
+
+proc sql;
+create table rxcui1_tty_str(compress=binary) as
+select distinct a.*, b.tty as TTY_RXCUI1, b.str as STR_RXCUI1 
+from rxcui_rela as a 
+left join rxcui_tty as b 
+on strip(a.rxcui1) = strip(b.rxcui) ;*got 2353463, cost 1:03;
+/*
+create table _tst_dups as
+select distinct * 
+from rxcui1_tty_str
+group by rxcui1
+having count(rxcui1)> 1;*got 2351639, found lots dups due to TTY=PSN, SY, TMSY, etc non-related types;
+*/
+create table rxcui2_tty_str(compress=binary) as
+select distinct a.*, b.tty as TTY_RXCUI2, b.str as STR_RXCUI2
+from rxcui1_tty_str as a
+left join rxcui_tty as b
+on strip(a.rxcui2) = strip(b.rxcui) ;*got 3674288, cost 8:03;
+quit;
+
+/* 
+proc freq data=rxcui2_tty_str order=freq;
+table rela ;
+run;
+
+get relation pairs : 
+	inverse_isa 			--- isa 			::: this only related to dose form conversions ;
+	consists_of				--- constitutes 
+	has_tradename			--- tradename_of 
+	has_ingredient 			--- ingredient_of
+	dose_form_of			--- has_dose_form 
+	doseformgroup_of		--- has_doseformgroup
+	has_ingredients			--- ingredients_of
+	has_quantified_form		--- quantified_form_of
+	contained_in			--- contains
+	has_part				--- part_of
+	has_precise_ingredient	--- precise_ingredient_of
+	form_of					--- has_form
+	reformulated_to			--- reformulation_of
+*/
+
+/* vvvvvvv below step verify that all TTY1=IN/PIN/MIN RXCUI1 can be found in RXCUI2 when TTY2=IN/PIN/MIN vvvvvvv *
+data _tty1_ins ;
+set rxcui2_tty_str;
+where strip(upcase(tty_rxcui1)) in ('IN','PIN','MIN');
+run;*got 178632;
+data _tty2_ins ;
+set rxcui2_tty_str;
+where strip(upcase(tty_rxcui2)) in ('IN','PIN','MIN');
+run;*got 178632;
+proc sql;
+create table _misd_tty1_ins as
+select distinct * from _tty1_ins
+where rxcui1 not in (select distinct rxcui2 from _tty2_ins) ;
+quit;*got 0 obs;
+*/
+/*
+data rxcui_rela_r1_ingres(compress=binary) ;
+set rxcui2_tty_str ;
+if strip(upcase(tty_rxcui1)) in ('IN','MIN','PIN') ;
+run;*got 178632;
+*/
+
+
+/* ================================================================================================================ */
+/*				ADD INGREDIENTS TO ALL RXCUI1, SINCE RXCUI1 & RXCUI2 ARE EXACT THE SAME IN RELA DATA				              */ 
+
+
+data rxcui_ingres1(compress=binary) ; /* <--- pull direct relation to ingredients --- */
+set rxcui2_tty_str ;
+if strip(upcase(tty_rxcui2)) in ('IN','MIN','PIN')
+	and strip(lowcase(rela)) in ('ingredient_of','ingredients_of','precise_ingredient_of') ;
+run ;*got 127175 from 3674288;
+
+proc sql;
+select count(distinct rxcui1) from rxcui_ingres1 ;*74984;
+*
+create table _dups_ingres1 as
+select distinct *
+from rxcui_ingres1
+group by rxcui1
+having count(rxcui1)>1 ;*got 80582;
+
+*select count(distinct rxcui1) from _dups_ingres1;*28391;
+*select count(distinct rxcui1) from _dups_ingres1 where strip(upcase(tty_rxcui1)) in ("IN","MIN","PIN","BN","BPCK","GPCK","SBD","SBDC","SBDG","SCD","SCDC","SCDG");*22237;
+
+create table rxcui_ingres1_a as /*<--- found that lots of dups are due to non-important rxcui types */
+select distinct *
+from rxcui_ingres1
+where strip(upcase(tty_rxcui1)) in ("IN","MIN","PIN","BN","BPCK","GPCK","SBD","SBDC","SBDF","SBDG","SCD","SCDC","SCDF","SCDG");*got 102486;
+*create table _dups_ingres1_a as
+select distinct *
+from rxcui_ingres1_a
+group by rxcui1
+having count(rxcui1)>1 ;*got 45733;
+
+create table rxcui_ingres1_b as /*pull rxcui1 had ingre direct linked but never found in above 'common useful' types*/
+select distinct *
+from rxcui_ingres1
+where strip(rxcui1) not in (select distinct strip(rxcui1) from rxcui_ingres1_a);*got 0;
+
+quit;
+
+data rxcui_ingres1_a_Min ;
+set rxcui_ingres1_a ;
+if strip(upcase(tty_rxcui2))='MIN';
+run;*got 11765;
+
+/*
+proc sql;
+create table _dups_ingres1_a_Min as
+select distinct *
+from rxcui_ingres1_a_Min
+group by rxcui1
+having count(rxcui1)>1 ;*got 0;
+quit;
+*/
+
+proc sql;
+create table rxcui_ingres1_a_in as
+select distinct *
+from rxcui_ingres1_a
+where strip(upcase(tty_rxcui2))='IN'
+	and strip(rxcui1) not in (select distinct strip(rxcui1) from rxcui_ingres1_a_min) ;*got 79960;
+
+*create table _dups_ingres1_a_in as
+select distinct *
+from rxcui_ingres1_a_in
+group by rxcui1
+having count(rxcui1)>1 ;*got 34790;
+quit;
+/*
+proc freq data=_dups_ingres1_a_in;table tty_rxcui1;run;*all dups are type as SCDF or SCDG;
+
+
+data work._tst_1000583;*<---this proves that RXCUI supposed to have MIN but don't have;
+set rxcui_ingres1_a_min;
+if strip(rxcui1)='1000583';
+run;*0;
+*/
+
+proc sql;
+create table rxcui_ingres1_a_pin as
+select distinct *
+from rxcui_ingres1_a
+where strip(upcase(tty_rxcui2))='PIN'
+	and strip(rxcui1) not in (select distinct strip(rxcui1) from rxcui_ingres1_a_min)
+	and strip(rxcui1) not in (select distinct strip(rxcui1) from rxcui_ingres1_a_in);*got 6682;
+
+*create table _dups_ingres1_a_Pin as
+select distinct *
+from rxcui_ingres1_a_Pin
+group by rxcui1
+having count(rxcui1)>1 ;*got 2785;
+quit;
+/*
+proc freq data=_dups_ingres1_a_pin;table tty_rxcui1;run;*all dups are type as BN;
+*/
+
+data rxcui_ingres1_cl(compress=binary) ; /* <--- this is cleaned combined rxcuis with direct ingredient relations */
+
+set rxcui_ingres1_a_in
+	rxcui_ingres1_a_min
+	rxcui_ingres1_a_pin ;
+
+tty_rxcui2 = strip(upcase(tty_rxcui2)) ;
+str_rxcui2 = strip(upcase(str_rxcui2)) ;
+
+rename 	rxcui2		= Ingredient_RXCUI 
+		TTY_RXCUI2	= Ingredient_RXCUI_Type 
+		str_rxcui2	= Ingredient_RXCUI_Desc ;
+run ;*got 98407 from 79960 & 11765 & 6682;
+
+proc sql;select count(distinct rxcui1) from rxcui_ingres1_cl;quit;*74984, the same as above counts in rxcui_ingres1 ;
+
+
+proc sql; /* <--- pull rxcuis never had direct relations to ingredients */ 
+create table rxcui_ingres2(compress=binary) as
+select distinct *
+from rxcui2_tty_str
+where strip(rxcui1) not in (select distinct rxcui1 from rxcui_ingres1_cl);*got 2413497;
+
+select count(distinct rxcui1), count(distinct rxcui2) from rxcui_ingres2 ;*122819, 196677;
+
+*create table _dup_ingres2(compress=binary) as
+select distinct *
+from rxcui_ingres2
+group by rxcui1
+having count(rxcui1)>1;*GOT 2411823;
+quit;
+
+data rxcui_ingres2_r1in(compress=binary) ; /*<--- found some tty_rxcui1 itself are ingredients */
+set rxcui_ingres2 ;
+length Ingredient_RXCUI $8 Ingredient_RXCUI_Type $20 Ingredient_RXCUI_Desc $3000 ;
+if strip(upcase(tty_rxcui1)) in ('IN','MIN','PIN') ;
+ingredient_rxcui 		= strip(rxcui1) ;
+ingredient_rxcui_type	= strip(upcase(tty_rxcui1)) ;
+ingredient_rxcui_desc	= strip(upcase(str_rxcui1)) ;
+run ;*got 178632 from 2413497;
+/*
+proc freq data=rxcui_ingres2_r1in;table rela * tty_rxcui2 * tty_rxcui1 / list missing ;run;
+*/
+
+data rxcui_ingres2_r2in(compress=binary) ; /*<--- found some tty_rxcui2 are 'IN', but relation are not 'ingredient_of', but like 'has_tradename', which could be used as akurate ingredient link */
+set rxcui_ingres2 ;
+length Ingredient_RXCUI $8 Ingredient_RXCUI_Type $20 Ingredient_RXCUI_Desc $3000 ;
+if strip(upcase(tty_rxcui1)) NOT in ('IN','MIN','PIN') and strip(upcase(tty_rxcui2)) in ('IN','MIN','PIN') ;
+ingredient_rxcui 		= strip(rxcui1) ;
+ingredient_rxcui_type	= strip(upcase(tty_rxcui1)) ;
+ingredient_rxcui_desc	= strip(upcase(str_rxcui1)) ;
+run;*got 15171 from 2413497;
+/*
+proc freq data=rxcui_ingres2_r2in;table rela * tty_rxcui2 * tty_rxcui1 / list missing ;run;
+*/
+/*
+data _tst_eg;
+set rxcui_ingres2_r2in ;
+if rela in ('has_part');
+run;
+*/
+
+data rxcui_ingres2_r12in(compress=binary) ;
+set  rxcui_ingres2_r1in
+	 rxcui_ingres2_r2in ;
+run;*got 193803 from 178632 & 15171;
+
+proc sql;
+create table rxcui_ingres2_a(compress=binary) as /*<--- found that lots of dups are due to non-important rxcui types */
+select distinct *
+from rxcui_ingres2
+where strip(rxcui1) NOT in (select distinct strip(rxcui1) from rxcui_ingres2_r12in) 
+	and strip(upcase(tty_rxcui1)) in ("IN","MIN","PIN","BN","BPCK","GPCK","SBD","SBDC","SBDF","SBDG","SCD","SCDC","SCDF","SCDG");*got 928501;
+
+*
+create table _dup_ingres2_a(compress=binary) as
+select distinct *
+from rxcui_ingres2_a
+group by rxcui1
+having count(rxcui1)>1;*got 1190700;*<--means most of them had dups;
+
+create table rxcui_ingres2_b as /*pull rxcui1 had ingre direct linked but never found in above 'common useful' types*/
+select distinct *
+from rxcui_ingres2
+where strip(rxcui1) NOT in (select distinct strip(rxcui1) from rxcui_ingres_r12in) 
+	and strip(rxcui1) NOT in (select distinct strip(rxcui1) from rxcui_ingres2_a);*got 237091;
+
+*
+create table _dup_ingres2_b(compress=binary) as
+select distinct *
+from rxcui_ingres2_b
+group by rxcui1
+having count(rxcui1)>1;*got 237064; *<--means most of them had dups;
+
+quit;
+
+proc freq data=rxcui_ingres2_a;table rela * tty_rxcui2 * tty_rxcui1 / list missing;run;
+
+proc freq data=rxcui_ingres2_b;table tty_rxcui1;run;*it's mostly DF & DFG, 4349(1.83%) is SY;
+
+proc sql; /*<--- join the possible ingredients to non-direct-ingredient-linked rxcuis */
+create table rxcui_ingres2_a_notin_ins(compress=binary) as
+select distinct a.*,
+				b.ingredient_rxcui, b.ingredient_rxcui_type, b.ingredient_rxcui_desc
+from rxcui_ingres2_a as a
+left join rxcui_ingres1_cl as b
+on strip(a.rxcui2) = strip(b.rxcui1) and strip(upcase(a.tty_rxcui2)) = strip(upcase(b.tty_rxcui1)) and strip(upcase(a.str_rxcui2)) = strip(upcase(b.str_rxcui1));
+*got 959361, cost 5:55;
+quit;
+
+proc freq data=rxcui_ingres2_a_notin_ins;table tty_rxcui1 * ingredient_rxcui_type / list missing ;run;
+
+data rxcui_ingres2_a_notin_ins_min ;
+set  rxcui_ingres2_a_notin_ins ;
+if strip(ingredient_rxcui_type) in ('MIN') ;
+run ;*got 6932;
+/*
+proc sql;
+create table _dup_ingres2_a_notin_ins_min as
+select distinct *
+from rxcui_ingres2_a_notin_ins_min
+group by rxcui1
+having count(rxcui1)>1;*got 446;
+quit;
+proc freq data=_dup_ingres2_a_notin_ins_min;table tty_rxcui1;run;*<--they are all bpck & gpck;
+*/
+
+proc sql;
+create table rxcui_ingres2_a_notin_ins_in(compress=binary) as
+select distinct * 
+from rxcui_ingres2_a_notin_ins 
+where strip(ingredient_rxcui_type) = 'IN' and strip(rxcui1) not in 
+	(select distinct strip(rxcui1) from rxcui_ingres2_a_notin_ins_min) ;*got 190857;
+
+create table _dup_ingres2_a_notin_ins_in as
+select distinct *
+from rxcui_ingres2_a_notin_ins_in
+group by rxcui1
+having count(rxcui1)>1;*got 136862, means lots are dups;
+quit;
+proc freq data=_dup_ingres2_a_notin_ins_in;table tty_rxcui1 * ingredient_rxcui_type / list missing;run;
+
+proc sql;
+create table rxcui_ingres2_a_notin_ins_pin(compress=binary) as
+select distinct * 
+from rxcui_ingres2_a_notin_ins 
+where strip(ingredient_rxcui_type) = 'IN' 
+	and strip(rxcui1) not in (select distinct strip(rxcui1) from rxcui_ingres2_a_notin_ins_min)
+	and strip(rxcui1) not in (select distinct strip(rxcui1) from rxcui_ingres2_a_notin_ins_in); *got 0;
+quit;
+
+data rxcui_ingres2_a_notin_ins_cl(compress=binary) ; /*<--- this step combined cleaned non-direct-ingredient-linked rxcuis with ingredients */
+set  rxcui_ingres2_a_notin_ins_min
+	 rxcui_ingres2_a_notin_ins_in
+	 rxcui_ingres2_a_notin_ins_pin ;
+run ;*got 197789 from 6932 & 190857 ;
+
+proc sql ;
+create table rxcui_ingres2_a_notin_nolink(compress=binary) as 
+select distinct * 
+from rxcui_ingres2_a_notin_ins 
+where strip(rxcui1) not in (select distinct strip(rxcui1) from rxcui_ingres2_a_notin_ins_cl) ; *got 5665;
+quit ;
+proc freq data=rxcui_ingres2_a_notin_nolink;table rela * tty_rxcui2 * tty_rxcui1 / list missing ;run;
+
+proc sql;
+create table rxcui_ingres2_a_ingre3(compress=binary) as
+select distinct a.*,
+				b.rela as RELA3, b.rxcui2 as RXCUI3, b.tty_rxcui2 as RXCUI3_Type, b.str_rxcui2 as RXCUI3_Desc 
+from rxcui_ingres2_a_notin_nolink(drop=ingredient_:) as a
+left join rxCUI2_TTY_str as b
+on strip(a.rxcui2) = strip(b.rxcui1) and strip(a.rxcui1) ^= strip(b.rxcui1) ; *got 1959096, cost 11:48;
+quit;
+
+proc freq data = rxcui_ingres2_a_ingre3 ;table tty_rxcui1 * rela * tty_rxcui2 * rela3 * rxcui3_type / list missing ;run;
+
+data rxcui_ingres2_a_ingre3_ins(compress=binary) ;
+set  rxcui_ingres2_a_ingre3 ;
+if strip(lowcase(rela3)) in ('ingredient_of','ingredients_of','precise_ingredient_of') ;
+rename 	rxcui3		= Ingredient_RXCUI
+		rxcui3_TYPE	= Ingredient_RXCUI_Type 
+		rxcui3_DESC	= Ingredient_RXCUI_Desc 
+;
+run;*GOT 1809;
+proc sql;select count(distinct rxcui1) from rxcui_ingres2_a_ingre3_ins;quit;*250;
+
+proc sql;
+create table rxcui_ingres2_a_ingre3_nolink as
+select distinct rxcui1, tty_rxcui1, str_rxcui1
+from rxcui_ingres2_a_ingre3 ;*got 609;
+select count(distinct rxcui1) from rxcui_ingres2_a_ingres3_nolink;*609;
+quit; 
+
+proc freq data=rxcui_ingres2_b;table rela * tty_rxcui1 * tty_rxcui2 / list missing;run; *most are DF & DFG, only a few are SY;
+
+
+data rxcui_ingres2_b_sy(compress=binary)
+	 rxcui_ingres2_b_df(compress=binary);
+set rxcui_ingres2_b ;
+if strip(tty_rxcui1) not in ('DF','DFG') then output rxcui_ingres2_b_sy;
+else output rxcui_ingres2_b_df;
+run;*got 4349 for SY, 232742 for DF;
+
+proc sql;
+create table rxcui_ingres2_b_sy_ingre3(compress=binary) as
+select distinct a.*,
+				b.rela as RELA3, b.rxcui2 as Ingredient_RXCUI, b.tty_rxcui2 as Ingredient_RXCUI_Type, b.str_rxcui2 as Ingredient_RXCUI_Desc
+from rxcui_ingres2_b_sy as a
+left join rxcui2_tty_str(where=(strip(rela) in ('ingredient_of','ingredients_of','precise_ingredient_of'))) as b
+on strip(a.rxcui2) = strip(b.rxcui1) and strip(a.rxcui1) ^= strip(b.rxcui1) ;*got 4649;
+quit;
+proc freq data=rxcui_ingres2_b_sy_ingre3;table rela3 * ingredient_rxcui_type * tty_rxcui1 / list missing ;run;
+
+
+data rxcui_ingres2_cl(compress=binary) ;
+set	 rxcui_ingres2_r12in 			(keep=rxcui1 tty_rxcui1 str_rxcui1 rela ingredient_:)
+	 rxcui_ingres2_a_notin_ins_cl	(keep=rxcui1 tty_rxcui1 str_rxcui1 rela ingredient_:)
+	 rxcui_ingres2_a_ingre3_ins		(keep=rxcui1 tty_rxcui1 str_rxcui1 rela3 ingredient_:
+	 								 rename=(rela3 = RELA) )
+	 rxcui_ingres2_a_ingre3_nolink 
+	 rxcui_ingres2_b_sy_ingre3		(keep=rxcui1 tty_rxcui1 str_rxcui1 rela ingredient_:)
+	 rxcui_ingres2_b_df				(keep=rxcui1 tty_rxcui1 str_rxcui1 )
+;
+run;*got 394010 from 193803 & 197789 & 1809 & 609 & 4649 & 232742;
+
+data rxcui_ingres_all(compress=binary) ;
+set rxcui_ingres1_cl 
+	rxcui_ingres2_cl ;
+rela 		= strip(upcase(rela)) ;
+tty_rxcui1	= strip(upcase(tty_rxcui1)) ;
+str_rxcui1	= strip(upcase(str_rxcui1)) ;
+run;*got 729808 from 98407 & 631401;
+proc sort data=rxcui_ingres_all nodup ;
+by _all_ ;
+run;*got 289770 from 729808 w/ 440038 dups;
+
+/*
+proc sql;
+create table _tst_misd as
+select distinct * from rxcui2_tty_str
+where strip(rxcui1) not in (select distinct strip(rxcui1) from rxcui_ingres_all);*got 0 !!! great !!! ;
+quit;
+
+proc freq data=rxcui_ingres_all;
+table rela * ingredient_rxcui_type * tty_rxcui1 / missing list ;
+run;* ingredient missing are mostly DF(26.53%) & DFG(5.36%), BPCK contribute 0.04%, & GPCK contribute 0.04% ;
+*/
+
+/* ============================================================================ */
+/*							ADD/JOIN BRAND NAMES								*/
+
+data rxcui_ingres_all_bn(compress=binary)
+	 rxcui_ingres_all_nobn(compress=binary) ;
+set  rxcui_ingres_all ;
+pos_strt = index(str_rxcui1,'[') ;
+pos_end  = index(str_rxcui1,']') ;
+if substr(strip(tty_rxcui1),1,3)='SBD' 	then Brand_Name = upcase(substr(strip(str_rxcui1),pos_strt+1,pos_end-1-pos_strt));
+else if strip(tty_rxcui1)='BN'			then Brand_Name = upcase(strip(str_rxcui1)) ;
+if brand_name ^= '' then output rxcui_ingres_all_bn ;
+else output rxcui_ingres_all_nobn ;
+run;*got 120419 for _bn, 169351 for _nobn ;
+
+
+data rela_tradename(compress=binary) ;
+set rxcui2_tty_str ;
+if strip(lowcase(rela)) in ('tradename_of') ;
+run;*got 340005 from 3674288 ;
+
+proc sql;
+create table rxcui_ingres_nobn_bn(compress=binary) as
+select distinct a.*, strip(upcase(b.str_rxcui2)) as STR_RXCUI2,
+				index(b.str_rxcui2,'[') as pos_strt,
+				index(b.str_rxcui2,']') as pos_end,
+				case when find(b.str_rxcui2,'[') then upcase(substr(strip(str_rxcui2),index(b.str_rxcui2,'[') + 1,index(b.str_rxcui2,']') - 1 - index(b.str_rxcui2,'[')))
+					 else upcase(strip(b.str_rxcui2)) end as Brand_Name 
+				/*b.rxcui2 as Brand_RXCUI, upcase(strip(b.tty_rxcui2)) as Brand_RXCUI_Type,*/
+from rxcui_ingres_all_nobn(drop=brand_name pos_:) as a
+left join rela_tradename as b
+on strip(a.rxcui1) = strip(b.rxcui1) ;*got 373433 from 169351, cost 1:21;
+quit;
+
+data rxcui_ingredient_all_brand (compress=binary) ;
+set rxcui_ingres_all_bn		(keep=rxcui1 tty_rxcui1 str_rxcui1 ingredient_: brand_name)
+	rxcui_ingres_nobn_bn	(keep=rxcui1 tty_rxcui1 str_rxcui1 ingredient_: brand_name) ;
+run;*got 493852 from 120419 & 373433;
+
+/* ==================================================== */
+/*						JOIN NDCS						*/
+
+data rxcui_ndc_all(compress=binary);
+set rxnm18.rxnsat(keep = rxcui atn atv sab /*rxaui atn=(attributeName) atv=(attributeValue)*/
+				  where = (strip(atn)='NDC' and strip(upcase(sab))='RXNORM' ) ) ;
+rename atv = NDC ;
+drop atn sab ;
+run;/*got 239097 */
+
+proc sql;
+create table rxcui_ingredient_all_brand_ndc(compress=binary) as
+select distinct a.rxcui1, a.tty_rxcui1, a.str_rxcui1, a.ingredient_rxcui, a.ingredient_rxcui_type, a.ingredient_rxcui_desc, a.brand_name,
+				b.ndc 
+from rxcui_ingredient_all_brand as a
+left join rxcui_ndc_all as b
+on strip(a.rxcui1) = strip(b.rxcui) ;
+quit; *got 2099536 cost 5:14;
+
+
+data RXNM18.RXCUI_Ingredient_Brand_NDC(compress=binary alter='xxxx' label="Based on RXNORM Jan2018, Created on 12/21/18.PW=_AD_MSY18");
+set RXCUI_ingredient_all_brand_ndc ;
+run; 
