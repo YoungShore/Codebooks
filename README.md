@@ -1,9 +1,9 @@
 # Codebooks
-collection of codebooks for different project
+collection of codebooks for different purposes
 
 # Description:
-  1. Names starts with 'CDBK_' means it's a definition codebook.
-  2. Names starts with 'Med_' means it's a medicine related codebook: 
+  1. Names starts with 'CDBK_' means it's a codebook for definitions. 
+  2. Names starts with 'Med_' means it's a codebook related to medicines: 
   
     2.1 the naming pattern is "Med"_"focused contents"_"medicine_target"_"code format" 
       eg. "Med_GNNBN_RA_SAS": focused content = GNNBN (Generic/Brand Names); 
@@ -21,6 +21,7 @@ collection of codebooks for different project
         SAS 
         R 
         ... 
+   3. Names starts with 'Lab_' means it's a codebook related to labs:
     
         
       
