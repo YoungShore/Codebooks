@@ -189,3 +189,19 @@ proc format;
 other='OT'
 ;
 run;
+
+proc format ;
+  value $newPats 
+'99201'='AV-New'	/* Office/outpatient visit - new patient */
+'99202'='AV-New'	/* Office/outpatient visit - new patient */
+'99203'='AV-New'	/* Office/outpatient visit - new patient */
+'99204'='AV-New'	/* Office/outpatient visit - new patient */
+'99205'='AV-New'	/* Office/outpatient visit - new patient */
+
+'99241'='AV-New'	/* Office consultation */
+'99242'='AV-New'	/* Office consultation */
+'99243'='AV-New'	/* Office consultation */
+'99244'='AV-New'	/* Office consultation */
+'99245'='AV-New'	/* Office consultation */
+;
+run;
