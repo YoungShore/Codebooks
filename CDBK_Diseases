@@ -1,0 +1,329 @@
+/* This is a SAS codes collection of disease definitions in ICD9/10 list
+    # all definitions are written in macros, without ending semicolon, so that you can quote them at any position of your coding lines or paragraphs.
+    # use necessary creterion from your own study (cohort/population) design, this list is only for ICD9/10 definitions.
+    # assume the ICD9/10 codes are saved in a macro variable named '&dx.', which you should define accordingly in %let dx = ; line below.
+ */
+
+%let dx     = your-data-variable-name-for-icd9-10-codes ;
+%let prepDx = upcase(compress(&dx.,'. ')) ; *#<--this prepares the raw Dxs into proper format and save from writting them again & again in below ;
+                                            *#^--compress the dot and blank, which save from using strip if convert number caused blanks ;
+                                            *#^--use compress can convert the numbers directly without errors, so use compress first then upcase ;
+
+%let px     = your-data-variable-name-for-px-codes(CPT/HCPCS/ICD9/10) ;
+%let prepPx = upcase(compress(&px.,'. ')) ; 
+
+%let LOINCs = your-data-variable-name-for-LOINC-codes ;
+
+
+/* ==================================================================== */
+/*                              Index - A                               */
+
+
+/* ------ AS (Ankylosing Spondylitis) ICD Codes ------ */
+
+%macro as_dx(prepDx) ;
+              &prepDx.      in ('7200')
+    or substr(&prepDx.,1,4) in ('M081')
+    or substr(&prepDx.,1,3) in ('M45')
+%mend ;
+
+/* ==================================================================== */
+/*                              Index - B                               */
+
+/* ==================================================================== */
+/*                              Index - C                               */
+
+/* ------ CABG (Coronary Artery Bypass Grafting) ------ */
+
+%macro cabg_px(prepPx) ;
+        substr(&prepPx.,1,4)    in ('3610','3611','3612','3613','3614','3615','3616','3617','3619')
+        or     &prepPx.         in ('33510','33511','33512','33513','33514','33516','33517','33518',
+                                    '33519','33521','33522','33523','33530','33533','33534','33535',
+                                    '33536')
+%mend ; 
+
+/* ==================================================================== */
+/*                              Index - D                               */
+
+/* ------ Diab (Diabetes)------ */
+
+%macro dm_dx(prepDx) ;
+        substr(&prepDx.,1,3)    in ('250','E10','E11') 
+%mend ;
+
+/* ==================================================================== */
+/*                              Index - E                               */
+
+/* ==================================================================== */
+/*                              Index - F                               */
+
+/* ==================================================================== */
+/*                              Index - G                               */
+
+/* ------ GI (Gastrointestinal Perforation) ------ */
+/* from https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5538140/ */
+
+%macro gi_dx(prepDx) ;
+           substr(&prepDx.,1,3) in ('557')
+        or substr(&prepDx.,1,4) in ('5304','5400',)
+        or substr(&prepDx.,1,5) in ('53110','53111','53120','53121','53150','53151','53160','53161','53210','53211',
+                                    '53220','53221','53250','53251','53260','53261','53310','53311','53320','53321',
+                                    '53350','53351','53360','53361','53410','53411','53420','53421','53450','53451',
+                                    '53460','53461','56200','56202','56201','56203','56210','56212','56211','56213',
+                                    '56893')
+%mend;
+
+%macro gi_cpt(prepPx) ;
+        &prepPx in ('44202','44203','44120','44121','44125','44130','44602','44603','44204','44205','44140','44145',
+                    '44604','44605') 
+%mend;
+
+/* ------ Gout (Gout) ICD Codes------ */
+
+%macro gout_dx(prepDx) ;
+       substr(&prepDx.,1,3) in ('274','M10')
+%mend ;
+
+/* ==================================================================== */
+/*                              Index - H                               */
+
+/* ------ Herpes Simplex ------ */
+
+%macro Herpes_dx(prepDx) ;
+        substr(&prepDx.,1,3) in ('054') 
+%mend ; 
+
+/* ------ HIV ------ */
+
+%macro hiv_dx(prepDx) ;
+        substr(&prepDx.,1,3) in ('042','B20','B21','B22','B23','B24','R75','Z21')
+%mend ;        
+
+/* ==================================================================== */
+/*                              Index - I                               */
+
+/* ------ IBD (Inflammatory Bowel Disease)------ */
+
+%macro ibd_dx(prepDx) ;
+        substr(&prepDx.,1,3)    in ('555','556','K50','K51')
+%mend ;
+
+/* ------ ILD (Interstitial Lung Disease)------ */
+
+%macro ild_dx(prepDx) ;
+        substr(&prepDx.,1,3)    in ('515')
+    or  substr(&prepDx.,1,4)    in ('5164','5165','5168','5169')
+    or  substr(&prepDx.,1,5)    in ('51630','51631','51633','51634','51635','51636','51637','71481')
+%mend ;    
+
+/* ------ Infections (Serious Inhospital Infections ------ */
+/* please refer to a separate file named 'SAS-Infection_ICD9_10_List.sas', since it's a long list */
+
+/* ==================================================================== */
+/*                              Index - J                               */
+
+/* ------ JIA (Juvenile Idiopathic Arthritis)------ */
+
+%macro jia_dx(prepDx) ;
+        substr(&prepDx.,1,3)    in ('696','714','720','M06','M08','M45','M46')
+    or  substr(&prepDx.,1,4)    in ('M055','M056','M057','M058','M059')
+    or  substr(&prepDx.,1.5)    in ('M4980')
+%mend ;
+
+/* ------ INJ (Joint Injection) ------ */
+
+%macro inj_px(prepPx) ;
+        &prepPx. in ("20600","20604","20605","20606","20610","20611","27096","G0260","8192")
+%mend ;        
+
+/* ==================================================================== */
+/*                              Index - K                               */
+
+/* ==================================================================== */
+/*                              Index - L                               */
+
+/* ------ LBP (Low Back Pain) ------ */
+
+%macro lbp_dx(prepDx) ;
+        &prepDx. in ('M150','M151','M152','M153','M158','M159',
+                    'M1610','M169','M1710','M175','M189',
+                    'M19','M190','M1901','M19011','M19012','M19019',
+                                 'M1902','M19021','M19022','M19029',
+                                 'M1903','M19031','M19032','M19039',
+                                 'M1904','M19041','M19042','M19049',
+                                 'M1907','M19071','M19072','M19079',
+                          'M191','M1911','M19111','M19112','M19119',
+                                 'M1912','M19121','M19122','M19129',
+                                 'M1913','M19131','M19132','M19139',
+                                 'M1914','M19141','M19142','M19149',
+                                 'M1917','M19171','M19172','M19179',
+                          'M192','M1921','M19211','M19212','M19219',
+                                 'M1922','M19221','M19222','M19229',
+                                 'M1923','M19231','M19232','M19239',
+                                 'M1924','M19241','M19242','M19249',
+                                 'M1927','M19271','M19272','M19279',
+                          'M199','M1990','M1991','M1992','M1993',
+                    'M4327','M4328','M438X9','M4645','M4647',
+                    'M4710','M4712','M4714','M4716','M47812','M47814','M47817','M47819',
+                    'M4800','M4804','M4806','M4808','M4810','M4820','M4830','M489',
+                    'M5000','M5020','M5030','M5080','M5090',
+                    'M5104','M5105','M5106','M5124','M5125','M5126','M5127','M5134','M5135','M5136','M5137','M5144','M5145','M5146','M5147','M5184','M5185','M5186','M5187','M519',
+                    'M532X7','M532X8','M533','M539',
+                    'M5408','M5410','M5414','M5415','M5416','M5417','M5430','M545','M546','M5489','M549',
+                    'M609','M7098','M729',
+                    'M790','M791','M792','M793','M794','M795','M79609','M797','M7981','M7989','M799','M79A19','M79A29','M79A3','M79A9',
+                    'M961',
+                    '715','7150','71500','71504','71509',
+                          '7151','71510','71511','71512','71513','71514','71515','71516','71517','71518',
+                          '7152','71520','71521','71522','71523','71524','71525','71526','71527','71528',
+                          '7153','71530','71531','71532','71533','71534','71535','71536','71537','71538',
+                          '7158','71580','71589',
+                          '7159','71590','71591','71592','71593','71594','71595','71596','71597','71598',
+                    '721','7210','7211','7212','7213','7214','72141','72142','7215','7216','7217','7218','7219','72190','72191',
+                    '722','7220',
+                          '7221','72210','72211',
+                          '7222',
+                          '7223','72230','72231','72232','72239',
+                          '7224',
+                          '7225','72251','72252',
+                          '7226',
+                          '7227','72270','72271','72272','72273','7228','72280','72281','72282','72283',
+                          '7229','72290','72291','72292','72293',
+                    '724','7240','72400','72401','72402','72403','72409',
+                          '7241','7242','7243','7244','7245','7246',
+                          '7247','72470','72471','72479',
+                          '7248','7249',
+                    '729','7290','7291','7292',
+                          '7293','72930','72931','72939',
+                          '7294','7295','7296',
+                          '7297','72971','72972','72973','72979',
+                          '7298','72981','72982','72989',
+                          '7299','72990','72991','72992','72999')
+%mend ;                          
+
+/* ==================================================================== */
+/*                              Index - M                               */
+
+/* ==================================================================== */
+/*                              Index - N                               */
+
+/* ==================================================================== */
+/*                              Index - O                               */
+
+/* ------ OA (Osteo Arthritis)------ */
+
+%macro oa_dx(prepDx) ;
+        substr(&prepDx.,1,3)    in ('715','M15','M16','M17','M18','M19')
+%mend ;
+
+/* ==================================================================== */
+/*                              Index - P                               */
+
+/* ------ PCI (Percutaneous Coronary Intervention) ------ */
+
+%macro pci_px(prepPx) ;
+        substr(&prepPx.,1,4)    in ('0066','3603','3604','3606','3607','3609') 
+        or     &prepPx.         in ('92986','92987','92990')
+%mend ;        
+
+/* ------ PML (Progressive Multifocal Leukoencephalopathy) ------ */
+
+%macro pml_dx(prepDx) ; *<--must from inpatient diagnosis;
+        &prepDx.        in ('0463') 
+%mend;
+%macro pml_px(prepPx) ;
+        &prepPx.        in ('87798')
+%mend;
+%macro pml_loincs(LOINCs) ;
+        &LOINCs. in ('32363-4','33295-7','34586-8','35661-8','42921-7','49410-4','49411-2','49412-0','49413-8','49414-6','49415-3',
+                     '49416-1','49417-9','49545-7','49547-3','70173-0')
+%mend ;
+
+/* ------ PsA (Psoriatic Arthritis)------ */
+
+%macro psa_dx(prepDx) ;
+        substr(&prepDx.,1.4)    in ('6960','L405')
+%mend ;
+
+/* ------ PsO (Psoriasis-Other)------ */
+
+%macro pso_dx(prepDx) ;
+        substr(&prepDx.,1,4) in ('6961')
+    or  substr(&prepDx.,1,3) in ('L40')  and substr(&prepDx.,1,4) NOT in ('L405')
+%mend ;
+
+/* ==================================================================== */
+/*                              Index - Q                               */
+
+/* ==================================================================== */
+/*                              Index - R                               */
+
+/* ------ RA (Rheumatoid Arthritis) ICD Codes------ */
+
+%macro ra_dx(prepDx) ;
+              &prepDx.      in ('7140','7142','71481')
+    or substr(&prepDx.,1,3) in ('M05','M06')    and substr(&prepDx.,1,4) not in ('M064','M061')
+%mend ;
+
+/* ==================================================================== */
+/*                              Index - S                               */
+
+/* ------ SLE (Systemic Lupus Erythematosus)------ */
+
+%macro sle_dx(prepDx) ;
+        substr(&prepDx.,1,3)    in ('710','M32') ;
+%mend ;
+
+/* ------ Stroke ( ? ICD10 ? )====== */
+
+%macro stroke_dx(prepDx) ;
+        substr(&prepDx.,1,3)    in ('436')
+    or  substr(&prepDx.,1,3)    in ('433','434')    and substr(&prepDx.,5,1)    in ('1')
+%mend ;
+
+/* ==================================================================== */
+/*                              Index - T                               */
+
+/* ------ TIA (usually not included in Stroke, must from Inpatient diagnois ------ */
+
+%macro tia_dx(prepDx) ;
+        substr(&prepDx.,1,3)    in ('435')
+%mend ;
+/* ==================================================================== */
+/*                              Index - U                               */
+
+/* ==================================================================== */
+/*                              Index - V                               */
+
+/* ------ Vasculitis ------ */
+
+%macro vasculit_dx(prepDx) ;
+        substr(&prepDx.)        in ('4460','4464','4465','4467','M313')
+        or     &prepDx.         in ('M3131','M317','M301') 
+%mend ; 
+
+/* ==================================================================== */
+/*                              Index - W                               */
+
+/* ==================================================================== */
+/*                              Index - X                               */
+
+/* ==================================================================== */
+/*                              Index - Y                               */
+
+/* ==================================================================== */
+/*                              Index - Z                               */
+
+/* ------ Zoster Infection ------ */
+
+%macro zost_dx(prepDx) ;
+        substr(&prepDx.,1,3)    in ('053') 
+%mend ;
+
+/* ------ Zoster Vaccine ------ */
+
+%macro zosVac_px(prepPx) ;
+        &prepPx. in ('90736')           /*<--this is specific to zoster vaccine */
+     or &prepPx. in ('G0377','90471')   /*<--these 2 need to be seen within 7 days after below NDCs found,and the PX date will be the vaccine date */
+                                        /* NDCs are: '00006496300', '00006496301', '00006496341', '54868570300' */
+%mend ; 
